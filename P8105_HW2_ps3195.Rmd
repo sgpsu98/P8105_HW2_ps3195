@@ -1,0 +1,296 @@
+---
+title: "P8105_hw2"
+author: "Pengyuan Su (ps3195)"
+date: "9/25/2020"
+output: github_document
+---
+
+
+Here is my homework 2:
+
+
+```{r setup}
+library(tidyverse)
+library(readxl)
+```
+
+
+>### Problem 1
+
+
+Define a path to the dataset:
+
+```{r}
+path_p1 = "./data/Trash-Wheel-Collection-Totals-8-6-19.xlsx"
+```
+
+
+Read the Mr. Trashwheel dataset.
+
+
+```{r read_mr_trashwheel}
+trashwheel_df = 
+      read_xlsx(
+        path = path_p1,
+        sheet = "Mr. Trash Wheel",
+        range = cell_cols("A:N")
+      ) %>% 
+      janitor::clean_names() %>% 
+      drop_na(dumpster) %>% 
+      mutate(
+        sports_ball = round(sports_balls),
+        sports_ball = as.integer(sports_ball)
+      )
+```
+
+
+Read precipitation data for 2018 and 2017:
+
+
+```{r read_2018_2017}
+precip_2018 = 
+       read_excel(
+              path = path_p1,
+              sheet = "2018 Precipitation",
+              skip = 1
+              
+       ) %>% 
+       janitor::clean_names() %>% 
+       drop_na(month) %>% 
+       mutate(year = 2018) %>% 
+       relocate(year)
+
+
+precip_2017 = 
+       read_excel(
+              path = path_p1,
+              sheet = "2017 Precipitation",
+              skip = 1
+       ) %>% 
+       janitor::clean_names() %>% 
+       drop_na(month) %>% 
+       mutate(year = 2017) %>% 
+       relocate(year)
+        
+```
+
+
+Combine annual precipitation dataframe:
+
+
+```{r convert}
+month_df = 
+  tibble(
+    month = 1:12,
+    month_name = month.name
+  )
+
+precip_df = 
+    bind_rows(precip_2018, precip_2017)
+
+precip_df = 
+    left_join(precip_df, month_df, by = "month")
+```
+
+
+This dataset contains information from the Mr. Trashwheel trash collector in Baltimore, Maryland. As trash enters the inner harbor, the trashwheel collects that trash, and stores it in a dumpster. The dataset contains information on year, month, and trash collected, include some specific kinds of trash. There are a total of `r nrow(trashwheel_df)` rows in our final dataset. Additional data sheets include month precipitation data. In this dataset:
+
+
+* The median number of sports balls found in a dumpster in 2017 was `r trashwheel_df %>% filter(year == 2017) %>% pull(sports_balls) %>% median()`
+* The total precipitation in 2018 was `r precip_df %>% filter(year == 2018) %>% pull(total) %>% sum()` inches.
+
+
+>### Problem 2
+
+
+Set the path of data:
+
+
+```{r setup2}
+path_p2 = "./data/NYC_Transit_Subway_Entrance_And_Exit_Data.csv"
+```
+
+
+Read NYC_Transit_Subway_Entrance_And_Exit_Data data:
+
+
+```{r read_NYC_Transit_Subway_Entrance_And_Exit_Data,  message = FALSE, warning=FALSE}
+
+NYC_df = 
+      read_csv(
+             file = path_p2,
+      ) %>% 
+      janitor::clean_names() %>% 
+      select(line, station_name, station_latitude, station_longitude, route1, route2, route3, route4, route5, route6, route7, route8, route9, route10, route11, entry, vending, entrance_type, ada) %>% 
+      mutate(entry = recode(entry, "YES" = TRUE, "NO" = FALSE),
+             vending = recode(vending, "YES" = TRUE, "NO" = FALSE)
+             
+             )
+```
+
+
+The dataset has `r ncol(NYC_df)` variables and they are `r ls(NYC_df)`. I have drop the variables that I donot need and convert `entry` and `vending` from character to logical variables. The dimension of the dataset is `r nrow(NYC_df)` rows * `r ncol(NYC_df)` columns. These data are not tidy enough since the route services have not been converted.
+
+
+* There are `r nrow(distinct(NYC_df,line, station_name))` distinct stations.
+* There are `r filter(NYC_df, ada == T) %>% distinct(., line, station_name) %>% nrow()` stations are ADA compliant.
+* Proportion of station entrance without vending is `r filter(NYC_df, entry == T & vending == F) %>% distinct(., line, station_name) %>% nrow() / nrow(distinct(NYC_df,line, station_name))` while proportion of station exit without vending is `r filter(NYC_df, entry == F & vending == F) %>% distinct(., line, station_name) %>% nrow() / nrow(distinct(NYC_df,line, station_name))`.
+
+
+```{r convert_route_service}
+NYC_df_t = 
+          NYC_df %>% 
+  
+  #First, I tried directly convert route1:route11 and failed since their value types are different. Then, I tried to divide route to route1:7(char) and route8:11(dbl) and pivot them separately, but when they finally left_join, the data always drop the characters in "train" which I can't figure the reason out. Hence, I change all of them to factor.
+          
+          mutate(route1 = factor(route1),   
+                 route2 = factor(route2),
+                 route3 = factor(route3),
+                 route4 = factor(route4),
+                 route5 = factor(route5),
+                 route6 = factor(route6),
+                 route7 = factor(route7),
+                 route8 = factor(route8),
+                 route9 = factor(route9),
+                 route10 = factor(route10),
+                 route11 = factor(route11)
+                 ) %>% 
+         pivot_longer(
+               route1:route11,
+               names_to = "route_number",
+               names_prefix = "route",
+               values_to = "train"
+         ) %>% 
+         arrange(route_number)
+         
+```
+
+
+There are `r filter(NYC_df_t, train == "A") %>% distinct(., line, station_name) %>% nrow()` distinct stations serve the A train, and for the stations serve the A train, there are `r filter(NYC_df_t, train == "A" & ada == T) %>% distinct(., line, station_name) %>% nrow()` that is ADA compliant.
+
+
+>### Problem 3
+
+
+First, we tidy the pols_month.csv:
+
+
+```{r pols_month, message = FALSE, warning=FALSE}
+pols_month_df = 
+          read_csv("./data/fivethirtyeight_datasets/pols-month.csv") %>% 
+          janitor::clean_names() %>% 
+          separate(mon, c("year", "month", "day"), sep = "([-])") %>% 
+          mutate(month = as.numeric(month),
+                 day = as.numeric(day),
+                 year = as.numeric(year),
+                 data = year * 100 + month
+                 ) %>% 
+          relocate(prez_gop, prez_dem) %>% 
+          pivot_longer(
+                 prez_gop:prez_dem,
+                 names_to = "president",
+                 names_prefix = "prez_",
+                 values_to = "justify"
+          ) %>% 
+          filter(justify == 1) %>% 
+          select(-day, -justify) %>% 
+          relocate(data)
+          
+month_df = 
+  tibble(
+    month = 1:12,
+    month_name = month.name
+  )
+
+pols_month_df = 
+         left_join(pols_month_df, month_df, by = "month") %>% 
+         relocate(data, year, month_name) %>% 
+         select(-month) %>% 
+         rename(month = month_name)
+```
+
+
+Then, we tidy the snp.csv:
+
+
+```{r snp, message = FALSE, warning=FALSE}
+snp_df = 
+          read_csv("./data/fivethirtyeight_datasets/snp.csv") %>% 
+          janitor::clean_names() %>% 
+          separate(date, c("month", "day", "year"), sep = "([/])") %>% 
+          mutate(month = as.numeric(month),
+                 day = as.numeric(day),
+                 year = as.numeric(year)
+                 )  
+
+snp_df = 
+          left_join(snp_df, month_df, by = "month") %>% 
+          mutate(data = year * 100 + month) %>% 
+          relocate(data, year, month_name) %>%
+          select(-month, -day) %>% 
+          rename(month = month_name)
+        
+```
+
+
+After that, we tidy the unemployment.csv:
+
+
+```{r unemployment, message = FALSE, warning=FALSE}
+unemployment_df = 
+              read_csv("./data/fivethirtyeight_datasets/unemployment.csv") %>% 
+              janitor::clean_names() %>% 
+              pivot_longer(
+                jan:dec,
+                names_to = "month",
+                values_to = "percentage_unemployment"
+              ) %>% 
+              mutate(month = recode(month, "jan" = "January", "feb" = "February", "mar" = "March", "apr" = "April", "may" = "May", "jun" = "June", "jul" = "July", "aug" = "August", "sep" = "September", "oct" = "October", "nov" = "November", "dec" = "December"))
+
+
+month_df_1 = 
+  tibble(
+    month_number = 1:12,
+    month = month.name
+  )
+
+
+unemployment_df =
+              left_join(unemployment_df, month_df_1, by = "month") %>% 
+              mutate(data = year * 100 + month_number) %>% 
+              select(-month_number) %>% 
+              relocate(data)
+
+```
+
+
+Finally, we combine them together and get the result (use `data` as key variable):
+
+
+```{r final}
+result_df = 
+        left_join(pols_month_df, snp_df, by = "data") %>% 
+        left_join(., unemployment_df, by = "data") %>% 
+        select(-year.y, -month.y, -year, -month) %>% 
+        rename(year = year.x, month = month.x) %>% 
+        arrange(data) %>% 
+        select(-data)
+```
+
+
+***Summary***
+
+
+`pols_month_df` contains the years and months of the count, the number of all kinds of republican (governors, senators, and representatives) on the associate date, the number of all kinds of democratic (governors, senators, and representatives) on the associate date, and which partisan the president is from.
+
+
+`snp_df` contains the years and months related to Standard & Poor’s stock market index (S&P), and the closing values of the S&P stock index on the associated date.
+
+
+`unemployment_df` contains the years and months of the measurements, and the percentage of unemployment related to the year and the month.
+
+
+As for the `result_df`, the names of the key variables are `r ls(result_df)`; The dimension of if is `r nrow(result_df)` rows * `r ncol(result_df)` columns; The range of years is (`r range(pull(result_df, year))`). It shows the combination of situation of president partisan, the closing values of the S&P stock index, and the percentage of employment on the associated date, which could help us analyze the relationship between them!
+
+
+
