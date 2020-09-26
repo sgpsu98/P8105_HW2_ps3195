@@ -12,6 +12,7 @@ Here is my homework 2:
 ```{r setup}
 library(tidyverse)
 library(readxl)
+library(knitr)
 ```
 
 
@@ -129,7 +130,7 @@ NYC_df =
 ```
 
 
-The dataset has `r ncol(NYC_df)` variables and they are `r ls(NYC_df)`. I have drop the variables that I donot need and convert `entry` and `vending` from character to logical variables. The dimension of the dataset is `r nrow(NYC_df)` rows * `r ncol(NYC_df)` columns. These data are not tidy enough since the route services have not been converted.
+The dataset has `r ncol(NYC_df)` variables and they are `r ls(NYC_df)`. I have dropped the variables that I do not need and converted `entry` and `vending` from character to logical variables. The dimension of the dataset is `r nrow(NYC_df)` rows * `r ncol(NYC_df)` columns. These data are not tidy enough since the route services have not been converted. The dataset shows:
 
 
 * There are `r nrow(distinct(NYC_df,line, station_name))` distinct stations.
@@ -281,13 +282,13 @@ result_df =
 ***Summary***
 
 
-`pols_month_df` contains the years and months of the count, the number of all kinds of republican (governors, senators, and representatives) on the associate date, the number of all kinds of democratic (governors, senators, and representatives) on the associate date, and which partisan the president is from.
+* `pols_month_df` contains information on the years and months of the count, the number of all kinds of republican (governors, senators, and representatives) on the associate date, the number of all kinds of democratic (governors, senators, and representatives) on the associate date, and which partisan the president is from.
 
 
-`snp_df` contains the years and months related to Standard & Poor’s stock market index (S&P), and the closing values of the S&P stock index on the associated date.
+* `snp_df` contains information on the years and months related to Standard & Poor’s stock market index (S&P), and the closing values of the S&P stock index on the associated date.
 
 
-`unemployment_df` contains the years and months of the measurements, and the percentage of unemployment related to the year and the month.
+* `unemployment_df` contains the information on the years and months of the measurements, and the percentage of unemployment related to the year and the month.
 
 
 As for the `result_df`, the names of the key variables are `r ls(result_df)`; The dimension of if is `r nrow(result_df)` rows * `r ncol(result_df)` columns; The range of years is (`r range(pull(result_df, year))`). It shows the combination of situation of president partisan, the closing values of the S&P stock index, and the percentage of employment on the associated date, which could help us analyze the relationship between them!
