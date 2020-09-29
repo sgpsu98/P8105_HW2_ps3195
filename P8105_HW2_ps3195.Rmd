@@ -122,7 +122,7 @@ NYC_df =
              file = path_p2,
       ) %>% 
       janitor::clean_names() %>% 
-      select(line, station_name, station_latitude, station_longitude, route1, route2, route3, route4, route5, route6, route7, route8, route9, route10, route11, entry, exit_only, vending, entrance_type, ada) %>% 
+      select(line, station_name, station_latitude, station_longitude, route1, route2, route3, route4, route5, route6, route7, route8, route9, route10, route11, entry, vending, entrance_type, ada) %>% 
       mutate(entry = recode(entry, "YES" = TRUE, "NO" = FALSE),
              vending = recode(vending, "YES" = TRUE, "NO" = FALSE)
              
@@ -135,7 +135,7 @@ The dataset has `r ncol(NYC_df)` variables and they are `r ls(NYC_df)`. I have d
 
 * There are `r nrow(distinct(NYC_df,line, station_name))` distinct stations.
 * There are `r filter(NYC_df, ada == T) %>% distinct(., line, station_name) %>% nrow()` stations are ADA compliant.
-* Proportion of station entrance/exit without vending allow entrance is `r filter(NYC_df, entry == T | exit_only == "Yes") %>% filter(vending == F) %>% distinct(line, station_name) %>% nrow() / nrow(distinct(NYC_df,line, station_name))`.
+* Proportion of station entrance/exit without vending allow entrance is `r filter(NYC_df, entry == T & vending == F) %>% distinct(line, station_name) %>% nrow() / filter(NYC_df, vending == F) %>% distinct(line, station_name) %>% nrow()`.
 
 
 ```{r convert_route_service}
